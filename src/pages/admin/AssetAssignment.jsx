@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import api from '../../services/api';
+import Pagination from '../../components/Pagination';
 
 const fetchUsers = async () => {
   const response = await api.get('/users');
@@ -126,6 +127,17 @@ const AssetAssignment = () => {
   };
 
   const formattedHistory = formatHistory();
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyPageSize, setHistoryPageSize] = useState(5);
+
+  const historyTotalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(formattedHistory.length / historyPageSize));
+  }, [formattedHistory.length, historyPageSize]);
+
+  const pagedHistory = useMemo(() => {
+    const start = historyPage * historyPageSize;
+    return formattedHistory.slice(start, start + historyPageSize);
+  }, [formattedHistory, historyPage, historyPageSize]);
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
@@ -286,7 +298,7 @@ const AssetAssignment = () => {
                   <td colSpan="5" className="text-center py-4 text-muted">No history found.</td>
                 </tr>
               ) : (
-                formattedHistory.map((row) => (
+                pagedHistory.map((row) => (
                   <tr key={row.id}>
                     <td className="text-muted border-bottom" style={{ padding: '16px 24px', fontSize: '0.9rem' }}>{formatDate(row.timestamp)}</td>
                     <td className="border-bottom" style={{ padding: '16px 24px' }}>
@@ -308,6 +320,20 @@ const AssetAssignment = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="pt-3">
+          <Pagination
+            page={Math.min(historyPage, historyTotalPages - 1)}
+            totalPages={historyTotalPages}
+            onPageChange={setHistoryPage}
+            showPageSize
+            pageSize={historyPageSize}
+            onPageSizeChange={(next) => {
+              setHistoryPageSize(next);
+              setHistoryPage(0);
+            }}
+          />
         </div>
       </div>
     </div>

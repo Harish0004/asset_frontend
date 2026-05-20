@@ -17,16 +17,19 @@ const cleanData = (data) => {
   return data;
 };
 
-// Transform Ticket response to flatten nested fields
+// Normalize ticket (flat DTO from API, or legacy nested entity)
 const normalizeTicket = (ticket) => {
   if (!ticket) return ticket;
-  
+
   return {
     ...ticket,
-    assetName: ticket.asset?.name || 'Unknown Asset',
-    serialNumber: ticket.asset?.serialNumber || 'N/A',
-    raisedByUsername: ticket.raisedBy?.username || 'Unknown',
-    technicianUsername: ticket.technician?.username || null
+    assetName: ticket.assetName || ticket.asset?.name || 'Unknown Asset',
+    serialNumber: ticket.serialNumber || ticket.asset?.serialNumber || 'N/A',
+    raisedByUsername: ticket.raisedByUsername || ticket.raisedBy?.username || 'Unknown',
+    technicianUsername: ticket.technicianUsername ?? ticket.technician?.username ?? null,
+    deadlineAt: ticket.deadlineAt ?? null,
+    resolvedAt: ticket.resolvedAt ?? null,
+    slaBreached: Boolean(ticket.slaBreached),
   };
 };
 

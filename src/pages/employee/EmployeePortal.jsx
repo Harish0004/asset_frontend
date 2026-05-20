@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import {
@@ -7,6 +7,8 @@ import {
   useMyAssets
 } from '../../services/useTicketQueries';
 import { useToast } from '../../components/Toast';
+import TicketSlaBadge, { formatDeadline } from '../../components/TicketSlaBadge';
+import Pagination from '../../components/Pagination';
 
 const EmployeePortal = () => {
   const user = useSelector(state => state.auth.user);
@@ -17,6 +19,8 @@ const EmployeePortal = () => {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('MEDIUM');
   const [errors, setErrors] = useState({});
+  const [ticketPage, setTicketPage] = useState(0);
+  const [ticketPageSize, setTicketPageSize] = useState(5);
 
   // Data fetching
   const { data: tickets = [], isLoading: ticketsLoading } = useTickets();
@@ -36,6 +40,21 @@ const EmployeePortal = () => {
       ? tickets.filter(t => t.raisedByUsername?.toLowerCase() === user?.username?.toLowerCase())
       : [];
   }, [tickets, user?.username]);
+
+  const totalTicketPages = useMemo(() => {
+    return Math.max(1, Math.ceil(myTickets.length / ticketPageSize));
+  }, [myTickets.length, ticketPageSize]);
+
+  useEffect(() => {
+    if (ticketPage >= totalTicketPages) {
+      setTicketPage(Math.max(0, totalTicketPages - 1));
+    }
+  }, [ticketPage, totalTicketPages]);
+
+  const pagedMyTickets = useMemo(() => {
+    const start = ticketPage * ticketPageSize;
+    return myTickets.slice(start, start + ticketPageSize);
+  }, [myTickets, ticketPage, ticketPageSize]);
 
   // Form validation
   const validateForm = () => {
@@ -340,10 +359,11 @@ const EmployeePortal = () => {
           )}
 
           {!ticketsLoading && myTickets.length > 0 && (
-            <div className="table-responsive">
-              <table className="table mb-0 align-middle">
-                <thead style={{ backgroundColor: '#F9FAFB' }}>
-                  <tr>
+            <>
+              <div className="table-responsive">
+                <table className="table mb-0 align-middle">
+                  <thead style={{ backgroundColor: '#F9FAFB' }}>
+                    <tr>
                     <th
                       className="text-muted fw-bold"
                       style={{
@@ -397,12 +417,23 @@ const EmployeePortal = () => {
                         borderBottom: '1px solid #E5E7EB'
                       }}
                     >
+                      DEADLINE / SLA
+                    </th>
+                    <th
+                      className="text-muted fw-bold"
+                      style={{
+                        fontSize: '0.75rem',
+                        letterSpacing: '0.5px',
+                        padding: '16px 24px',
+                        borderBottom: '1px solid #E5E7EB'
+                      }}
+                    >
                       CREATED
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {myTickets.map(ticket => (
+                  {pagedMyTickets.map(ticket => (
                     <tr key={ticket.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
                       <td style={{ padding: '16px 24px' }}>
                         <div className="fw-bold" style={{ fontSize: '0.95rem', color: '#1F2937' }}>
@@ -422,6 +453,14 @@ const EmployeePortal = () => {
                         {getStatusBadge(ticket.status)}
                       </td>
                       <td style={{ padding: '16px 24px' }}>
+                        <TicketSlaBadge ticket={ticket} />
+                        {!ticket.slaBreached && ticket.deadlineAt && (
+                          <small className="text-muted d-block mt-1">
+                            {formatDeadline(ticket.deadlineAt)}
+                          </small>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
                         <small className="text-muted">
                           {ticket.createdAt
                             ? new Date(ticket.createdAt).toLocaleDateString()
@@ -433,6 +472,22 @@ const EmployeePortal = () => {
                 </tbody>
               </table>
             </div>
+            {myTickets.length > ticketPageSize && (
+              <div className="p-3 border-top" style={{ backgroundColor: '#FFFFFF' }}>
+                <Pagination
+                  page={Math.min(ticketPage, totalTicketPages - 1)}
+                  totalPages={totalTicketPages}
+                  onPageChange={setTicketPage}
+                  showPageSize
+                  pageSize={ticketPageSize}
+                  onPageSizeChange={(next) => {
+                    setTicketPageSize(next);
+                    setTicketPage(0);
+                  }}
+                />
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>

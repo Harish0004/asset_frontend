@@ -76,7 +76,7 @@ const SidebarLayout = () => {
             </div>
           </div>
           <div className="d-flex align-items-center gap-3">
-            <span className="text-muted" style={{ fontSize: '0.9rem' }}>{user?.username}@company.com</span>
+            <span className="text-muted" style={{ fontSize: '0.9rem' }}>{user?.username}@focusrtech.com</span>
             <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold" style={{ width: '36px', height: '36px', backgroundColor: '#312E81', fontSize: '0.9rem' }}>
               {user?.username?.substring(0, 2).toUpperCase() || 'AD'}
             </div>

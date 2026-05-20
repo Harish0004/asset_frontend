@@ -3,6 +3,8 @@ import { useSelector } from 'react-redux';
 import { ChevronDown, Loader, Plus } from 'lucide-react';
 import { useTickets, useTechnicians, useDispatchTicket, useCreateTicket, useAllAssets } from '../../services/useTicketQueries';
 import { useToast } from '../../components/Toast';
+import TicketSlaBadge, { formatDeadline } from '../../components/TicketSlaBadge';
+import Pagination from '../../components/Pagination';
 
 const AdminTicketsDashboard = () => {
   const user = useSelector(state => state.auth.user);
@@ -13,6 +15,8 @@ const AdminTicketsDashboard = () => {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('MEDIUM');
   const [formErrors, setFormErrors] = useState({});
+  const [listPage, setListPage] = useState(0);
+  const [listPageSize, setListPageSize] = useState(5);
   const { addToast } = useToast();
 
   const { data: tickets = [], isLoading: ticketsLoading, isError: ticketsError } = useTickets();
@@ -25,6 +29,15 @@ const AdminTicketsDashboard = () => {
   const adminTickets = useMemo(() => {
     return Array.isArray(tickets) ? tickets : [];
   }, [tickets]);
+
+  const totalTicketPages = useMemo(() => {
+    return Math.max(1, Math.ceil(adminTickets.length / listPageSize));
+  }, [adminTickets.length, listPageSize]);
+
+  const pagedTickets = useMemo(() => {
+    const start = listPage * listPageSize;
+    return adminTickets.slice(start, start + listPageSize);
+  }, [adminTickets, listPage, listPageSize]);
 
   const selectedTicket = useMemo(() => {
     return adminTickets.find(t => t.id === selectedTicketId);
@@ -319,7 +332,7 @@ const AdminTicketsDashboard = () => {
             </div>
           )}
 
-          {!ticketsLoading && adminTickets.map(ticket => (
+            {!ticketsLoading && pagedTickets.map(ticket => (
             <div
               key={ticket.id}
               className={`ticket-item ${selectedTicketId === ticket.id ? 'selected' : ''}`}
@@ -340,9 +353,30 @@ const AdminTicketsDashboard = () => {
                 </small>
                 {getStatusPill(ticket.status)}
               </div>
+              {ticket.slaBreached && (
+                <small className="text-danger fw-semibold d-block mt-1" style={{ fontSize: '0.75rem' }}>
+                  SLA breached
+                </small>
+              )}
             </div>
           ))}
         </div>
+
+          {!ticketsLoading && (
+            <div className="p-3 border-top" style={{ backgroundColor: '#FFFFFF' }}>
+              <Pagination
+                page={Math.min(listPage, totalTicketPages - 1)}
+                totalPages={totalTicketPages}
+                onPageChange={setListPage}
+                showPageSize
+                pageSize={listPageSize}
+                onPageSizeChange={(next) => {
+                  setListPageSize(next);
+                  setListPage(0);
+                }}
+              />
+            </div>
+          )}
       </div>
 
       {/* Right Pane: Detail View */}
@@ -370,8 +404,9 @@ const AdminTicketsDashboard = () => {
                   {getPriorityPill(selectedTicket.priority)}
                 </div>
               </div>
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap align-items-center">
                 {getStatusPill(selectedTicket.status)}
+                <TicketSlaBadge ticket={selectedTicket} />
               </div>
             </div>
 
@@ -413,6 +448,33 @@ const AdminTicketsDashboard = () => {
                   <p className="fw-semibold mb-0" style={{ fontSize: '0.95rem', color: '#1F2937' }}>
                     {selectedTicket.raisedByUsername || 'Unknown'}
                   </p>
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div
+                  className="p-3 rounded"
+                  style={{
+                    backgroundColor: selectedTicket.slaBreached ? '#FEF2F2' : '#F9FAFB',
+                    border: `1px solid ${selectedTicket.slaBreached ? '#FECACA' : '#E5E7EB'}`,
+                  }}
+                >
+                  <small className="text-muted d-block mb-1" style={{ fontSize: '0.75rem' }}>
+                    SLA DEADLINE
+                  </small>
+                  <p
+                    className="fw-semibold mb-0"
+                    style={{
+                      fontSize: '0.95rem',
+                      color: selectedTicket.slaBreached ? '#991B1B' : '#1F2937',
+                    }}
+                  >
+                    {formatDeadline(selectedTicket.deadlineAt)}
+                  </p>
+                  {selectedTicket.resolvedAt && (
+                    <small className="text-muted d-block mt-1">
+                      Resolved: {formatDeadline(selectedTicket.resolvedAt)}
+                    </small>
+                  )}
                 </div>
               </div>
             </div>

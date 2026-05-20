@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Eye, Edit2, Save, X } from 'lucide-react';
 import api from '../../services/api';
+import Pagination from '../../components/Pagination';
 
 const fetchAssets = async ({ queryKey }) => {
-  const [_key, { search, type, status }] = queryKey;
+  const [_key, { search, type, status, page, size }] = queryKey;
   let params = new URLSearchParams();
   if (search) params.append('search', search);
   if (type) params.append('type', type);
   if (status) params.append('status', status);
+  params.append('page', String(page ?? 0));
+  params.append('size', String(size ?? 10));
 
   const response = await api.get(`/assets?${params.toString()}`);
   return response.data; // Expected Page<AssetResponseDTO>
@@ -18,6 +21,8 @@ const AssetInventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -32,10 +37,15 @@ const AssetInventory = () => {
   const queryClient = useQueryClient();
 
   const { data: assetsPage, isLoading, isError } = useQuery({
-    queryKey: ['assets', { search: searchTerm, type: filterType, status: filterStatus }],
+    queryKey: ['assets', { search: searchTerm, type: filterType, status: filterStatus, page, size: pageSize }],
     queryFn: fetchAssets,
     keepPreviousData: true
   });
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, filterType, filterStatus]);
 
   const addAssetMutation = useMutation({
     mutationFn: (newAsset) => api.post('/assets', newAsset),
@@ -127,6 +137,7 @@ const AssetInventory = () => {
 
   const assets = assetsPage?.content || [];
   const totalAssets = assetsPage?.totalElements || 0;
+  const totalPages = assetsPage?.totalPages || 0;
 
   const getStatusBadge = (status) => {
     if (!status) return null;
@@ -149,7 +160,9 @@ const AssetInventory = () => {
     <div className="p-3" style={{ maxWidth: '1400px', margin: '0 auto' }}>
       <div className="mb-4">
         <h2 className="fw-bold mb-1 text-dark" style={{ letterSpacing: '-0.5px' }}>Asset Inventory</h2>
-        <p className="text-muted" style={{ fontSize: '0.9rem' }}>{totalAssets} of {totalAssets} assets shown</p>
+        <p className="text-muted" style={{ fontSize: '0.9rem' }}>
+          {totalAssets} assets • Page {totalPages ? page + 1 : 0} of {totalPages || 0}
+        </p>
       </div>
 
       <div className="fluent-card shadow-sm p-4 mb-0" style={{ borderRadius: '12px', border: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' }}>
@@ -245,6 +258,20 @@ const AssetInventory = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="pt-3">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            showPageSize
+            pageSize={pageSize}
+            onPageSizeChange={(next) => {
+              setPageSize(next);
+              setPage(0);
+            }}
+          />
         </div>
       </div>
 

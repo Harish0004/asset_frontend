@@ -7,10 +7,14 @@ const TechDashboard = () => {
   const user = useSelector(state => state.auth.user);
   const { data: tickets = [], isLoading, isError } = useTickets();
 
-  // Filter tickets assigned to current technician
+  // Filter tickets assigned to current technician (API returns technicianUsername on DTO)
   const myTickets = useMemo(() => {
     if (!Array.isArray(tickets) || !user?.username) return [];
-    return tickets.filter(t => t.technician?.username?.toLowerCase() === user?.username?.toLowerCase());
+    const me = user.username.toLowerCase();
+    return tickets.filter((t) => {
+      const assignedTo = (t.technicianUsername ?? t.technician?.username ?? '').toLowerCase();
+      return assignedTo === me;
+    });
   }, [tickets, user?.username]);
 
   // Calculate stats
@@ -168,23 +172,6 @@ const TechDashboard = () => {
         </div>
       </div>
 
-      {/* Priority Alert */}
-      {(stats.critical > 0 || stats.high > 0) && (
-        <div
-          className="alert d-flex align-items-center gap-3 mb-4"
-          style={{ backgroundColor: '#FEF3C7', border: '1px solid #FCD34D', color: '#92400E' }}
-          role="alert"
-        >
-          <AlertCircle size={20} className="flex-shrink-0" />
-          <div>
-            <strong>Priority Items</strong>
-            <p className="mb-0" style={{ fontSize: '0.9rem' }}>
-              You have {stats.critical} critical and {stats.high} high priority tickets requiring attention.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Task Overview Cards */}
       <div className="row g-3">
         {/* Pending Assignments */}
@@ -219,40 +206,7 @@ const TechDashboard = () => {
                   waiting to be accepted
                 </span>
               </div>
-              {stats.critical > 0 && (
-                <div
-                  className="p-2 rounded"
-                  style={{ backgroundColor: '#FEE2E2', marginTop: '12px' }}
-                >
-                  <span
-                    className="badge rounded-pill"
-                    style={{
-                      backgroundColor: '#FEE2E2',
-                      color: '#DC2626',
-                      padding: '6px 12px'
-                    }}
-                  >
-                    🔴 {stats.critical} Critical Priority
-                  </span>
-                </div>
-              )}
-              {stats.high > 0 && (
-                <div
-                  className="p-2 rounded"
-                  style={{ backgroundColor: '#FEF3C7', marginTop: '8px' }}
-                >
-                  <span
-                    className="badge rounded-pill"
-                    style={{
-                      backgroundColor: '#FEF3C7',
-                      color: '#D97706',
-                      padding: '6px 12px'
-                    }}
-                  >
-                    🟠 {stats.high} High Priority
-                  </span>
-                </div>
-              )}
+             
             </div>
           </div>
         </div>

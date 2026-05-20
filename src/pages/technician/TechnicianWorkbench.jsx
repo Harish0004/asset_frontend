@@ -3,10 +3,14 @@ import { useSelector } from 'react-redux';
 import { Bell, CheckCircle, Loader, AlertCircle } from 'lucide-react';
 import { useTickets, useUpdateTicketStatus } from '../../services/useTicketQueries';
 import { useToast } from '../../components/Toast';
+import TicketSlaBadge, { formatDeadline } from '../../components/TicketSlaBadge';
+import Pagination from '../../components/Pagination';
 
 const TechnicianWorkbench = () => {
   const user = useSelector(state => state.auth.user);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [listPage, setListPage] = useState(0);
+  const [listPageSize, setListPageSize] = useState(5);
   const { addToast } = useToast();
 
   const { data: tickets = [], isLoading, isError } = useTickets();
@@ -15,7 +19,9 @@ const TechnicianWorkbench = () => {
   // Filter tickets assigned to current technician
   const myTickets = useMemo(() => {
     if (!Array.isArray(tickets) || !user?.username) return [];
-    return tickets.filter(t => t.technician?.username?.toLowerCase() === user?.username?.toLowerCase());
+    return tickets.filter(t =>
+      t.technicianUsername?.toLowerCase() === user?.username?.toLowerCase()
+    );
   }, [tickets, user?.username]);
 
   // Separate tickets by status
@@ -26,6 +32,15 @@ const TechnicianWorkbench = () => {
   const selectedTicket = useMemo(() => {
     return myTickets.find(t => t.id === selectedTicketId);
   }, [myTickets, selectedTicketId]);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(myTickets.length / listPageSize));
+  }, [myTickets.length, listPageSize]);
+
+  const pagedTickets = useMemo(() => {
+    const start = listPage * listPageSize;
+    return myTickets.slice(start, start + listPageSize);
+  }, [myTickets, listPage, listPageSize]);
 
   const handleAcceptAndStart = async () => {
     if (!selectedTicket) return;
@@ -64,6 +79,23 @@ const TechnicianWorkbench = () => {
     const style = priorityMap[priority] || priorityMap.MEDIUM;
     return (
       <span className="badge rounded-pill" style={{ backgroundColor: style.bg, color: style.color, padding: '6px 12px' }}>
+        {style.label}
+      </span>
+    );
+  };
+
+  const getStatusPill = (status) => {
+    const statusMap = {
+      OPEN: { bg: '#FEF3C7', color: '#92400E', label: 'Open' },
+      IN_PROGRESS: { bg: '#DBEAFE', color: '#1E40AF', label: 'In Progress' },
+      RESOLVED: { bg: '#D1FAE5', color: '#065F46', label: 'Resolved' }
+    };
+    const style = statusMap[status] || { bg: '#F3F4F6', color: '#374151', label: status || '—' };
+    return (
+      <span
+        className="badge rounded-pill"
+        style={{ backgroundColor: style.bg, color: style.color, padding: '6px 12px' }}
+      >
         {style.label}
       </span>
     );
@@ -204,7 +236,7 @@ const TechnicianWorkbench = () => {
               </div>
             )}
 
-            {!isLoading && myTickets.map(ticket => (
+            {!isLoading && pagedTickets.map(ticket => (
               <div
                 key={ticket.id}
                 className="p-4"
@@ -225,14 +257,38 @@ const TechnicianWorkbench = () => {
                     </div>
                     <small className="text-muted">{ticket.assetName || 'Unknown Asset'}</small>
                   </div>
-                  {getPriorityPill(ticket.priority)}
+                  <div className="d-flex gap-2 flex-wrap justify-content-end">
+                    {getPriorityPill(ticket.priority)}
+                    {getStatusPill(ticket.status)}
+                  </div>
                 </div>
                 <small className="text-muted d-block mt-2">
                   By: {ticket.raisedByUsername}
                 </small>
+                {ticket.slaBreached && (
+                  <small className="text-danger fw-semibold d-block mt-1" style={{ fontSize: '0.75rem' }}>
+                    SLA breached
+                  </small>
+                )}
               </div>
             ))}
           </div>
+
+          {!isLoading && (
+            <div className="p-3 border-top" style={{ backgroundColor: '#FFFFFF' }}>
+              <Pagination
+                page={Math.min(listPage, totalPages - 1)}
+                totalPages={totalPages}
+                onPageChange={setListPage}
+                showPageSize
+                pageSize={listPageSize}
+                onPageSizeChange={(next) => {
+                  setListPageSize(next);
+                  setListPage(0);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right: Detail View & Action Panel */}
@@ -278,7 +334,7 @@ const TechnicianWorkbench = () => {
                   <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
                     {selectedTicket.assetName}
                   </p>
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-2 flex-wrap align-items-center">
                     {getPriorityPill(selectedTicket.priority)}
                     <span
                       className="badge rounded-pill"
@@ -294,6 +350,7 @@ const TechnicianWorkbench = () => {
                     >
                       {selectedTicket.status}
                     </span>
+                    <TicketSlaBadge ticket={selectedTicket} />
                   </div>
                 </div>
 
@@ -325,6 +382,21 @@ const TechnicianWorkbench = () => {
                       {selectedTicket.createdAt
                         ? new Date(selectedTicket.createdAt).toLocaleDateString()
                         : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="col-12">
+                    <small className="text-muted d-block mb-1" style={{ fontSize: '0.75rem' }}>
+                      SLA DEADLINE
+                    </small>
+                    <p
+                      className="fw-semibold mb-0"
+                      style={{
+                        fontSize: '0.9rem',
+                        color: selectedTicket.slaBreached ? '#991B1B' : '#1F2937',
+                      }}
+                    >
+                      {formatDeadline(selectedTicket.deadlineAt)}
+                      {selectedTicket.slaBreached && ' (Breached)'}
                     </p>
                   </div>
                 </div>
