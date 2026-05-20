@@ -42,7 +42,6 @@ const SidebarLayout = () => {
       return (
         <>
           <NavLink to="/employee/dashboard" className="sidebar-link"><LayoutDashboard size={18} className="me-2"/> Dashboard</NavLink>
-          <NavLink to="/employee/assets" className="sidebar-link"><Package size={18} className="me-2"/> My Assets</NavLink>
           <NavLink to="/employee/ticket" className="sidebar-link"><Ticket size={18} className="me-2"/> Raise Ticket</NavLink>
         </>
       );

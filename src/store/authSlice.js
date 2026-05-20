@@ -13,6 +13,23 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+export const registerUser = createAsyncThunk(
+  'auth/register',
+  async (userData, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      const data = error.response?.data;
+      if (data?.fieldErrors) {
+        const messages = Object.values(data.fieldErrors).join(' ');
+        return rejectWithValue(messages || data.message);
+      }
+      return rejectWithValue(data?.message || 'Registration failed. Please try again.');
+    }
+  }
+);
+
 const savedUser = localStorage.getItem('eams_user');
 const initialState = {
   user: savedUser ? JSON.parse(savedUser) : null,
@@ -48,6 +65,20 @@ const authSlice = createSlice({
         localStorage.setItem('eams_user', JSON.stringify(action.payload));
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        localStorage.setItem('eams_user', JSON.stringify(action.payload));
+      })
+      .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser, clearError } from '../store/authSlice';
 import { Package } from 'lucide-react';
@@ -65,10 +65,17 @@ const Login = () => {
             />
             <label htmlFor="floatingPassword">Password</label>
           </div>
-          <button className="btn btn-primary w-100 py-2 fw-semibold" type="submit" disabled={loading}>
+          <button className="btn btn-primary w-100 py-2 fw-semibold mb-3" type="submit" disabled={loading}>
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
+
+        <p className="text-center text-muted mb-0">
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="text-decoration-none fw-semibold" style={{ color: 'var(--fluent-indigo)' }}>
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );

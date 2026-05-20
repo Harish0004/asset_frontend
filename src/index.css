@@ -153,6 +153,13 @@ body {
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
+.login-card.register-card {
+  max-width: 440px;
+}
+.login-container .form-select:focus {
+  border-color: var(--fluent-indigo);
+  box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.25);
+}
 
 /* Focus Highlights */
 .form-control:focus {
